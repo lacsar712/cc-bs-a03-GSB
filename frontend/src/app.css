@@ -129,3 +129,63 @@ th {
   background: #fff8e1;
   color: #f57f17;
 }
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+button.tab {
+  background: #eceff1;
+  color: #37474f;
+}
+
+button.tab.active {
+  background: #1565c0;
+  color: #fff;
+}
+
+.note {
+  margin-left: 0.6rem;
+  font-size: 0.78rem;
+  font-weight: normal;
+  color: #777;
+}
+
+p.note {
+  margin: 0.6rem 0 0;
+}
+
+button.mini {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  margin-left: 0.35rem;
+}
+
+.amendbox {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.amendbox input {
+  min-width: 90px;
+  padding: 0.25rem 0.4rem;
+}
+
+tr.drift-row {
+  background: #fff3e0;
+}
+
+tr.amended-row {
+  background: #fce4ec;
+}
+
+ul.diffs {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  color: #c62828;
+  font-size: 0.78rem;
+}

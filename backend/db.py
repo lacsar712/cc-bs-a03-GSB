@@ -21,7 +21,56 @@ CREATE TABLE IF NOT EXISTS strain_readings (
     created_at timestamptz NOT NULL DEFAULT now(),
     processed_at timestamptz
 );
+
+/* 温度补偿：每跨段一个补偿系数与基准气温 */
+CREATE TABLE IF NOT EXISTS compensation_config (
+    span_code text PRIMARY KEY,
+    coeff double precision NOT NULL,
+    base_temp double precision NOT NULL,
+    updated_by text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+/* 补偿账本：只允许 INSERT，UPDATE/DELETE 由触发器拒绝。
+   与 strain_readings 在同一事务写入，保证入队与落笔同生共死。 */
+CREATE TABLE IF NOT EXISTS compensation_ledger (
+    id bigserial PRIMARY KEY,
+    reading_id bigint NOT NULL UNIQUE REFERENCES strain_readings (id),
+    span_code text NOT NULL,
+    raw_microstrain double precision NOT NULL,
+    coeff double precision NOT NULL,
+    base_temp double precision NOT NULL,
+    site_temp double precision NOT NULL,
+    compensated_microstrain double precision NOT NULL,
+    verdict text NOT NULL,
+    reason text NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_comp_ledger_span
+    ON compensation_ledger (span_code, id);
+
+ALTER TABLE strain_readings ADD COLUMN IF NOT EXISTS site_temp double precision;
+ALTER TABLE strain_readings ADD COLUMN IF NOT EXISTS base_temp double precision;
+ALTER TABLE strain_readings ADD COLUMN IF NOT EXISTS coeff double precision;
+ALTER TABLE strain_readings
+    ADD COLUMN IF NOT EXISTS compensated_microstrain double precision;
+ALTER TABLE strain_readings ADD COLUMN IF NOT EXISTS amended boolean NOT NULL DEFAULT false;
+ALTER TABLE strain_readings ADD COLUMN IF NOT EXISTS amended_at timestamptz;
+
 CREATE INDEX IF NOT EXISTS idx_strain_readings_status ON strain_readings (status, id);
+
+CREATE OR REPLACE FUNCTION compensation_ledger_freeze() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION '补偿账本为追加式账本，禁止修改或删除旧账';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_comp_ledger_freeze ON compensation_ledger;
+CREATE TRIGGER trg_comp_ledger_freeze
+    BEFORE UPDATE OR DELETE ON compensation_ledger
+    FOR EACH ROW EXECUTE FUNCTION compensation_ledger_freeze();
 """
 
 
@@ -59,7 +108,8 @@ async def seed_if_empty(pool: AsyncConnectionPool) -> None:
                 await cur.execute(
                     """
                     INSERT INTO strain_readings
-                        (span_code, microstrain, verdict, reason, status, created_by, processed_at)
+                        (span_code, microstrain, verdict, reason, status,
+                         created_by, processed_at)
                     VALUES (%s, %s, %s, %s, 'done', 'surveyor', now())
                     """,
                     (span_code, microstrain, verdict, reason),
@@ -90,7 +140,8 @@ def seed_if_empty_sync(conn) -> None:
         conn.execute(
             """
             INSERT INTO strain_readings
-                (span_code, microstrain, verdict, reason, status, created_by, processed_at)
+                (span_code, microstrain, verdict, reason, status,
+                 created_by, processed_at)
             VALUES (%s, %s, %s, %s, 'done', 'surveyor', now())
             """,
             (span_code, microstrain, verdict, reason),
