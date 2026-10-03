@@ -129,3 +129,45 @@ th {
   background: #fff8e1;
   color: #f57f17;
 }
+
+.topright {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nav button.active {
+  background: #1565c0;
+}
+
+.userline {
+  font-size: 0.9rem;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.hint {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: #777;
+}
+
+.compform {
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+  border-top: 1px dashed #ccc;
+}
+
+.tablewrap {
+  overflow-x: auto;
+}
